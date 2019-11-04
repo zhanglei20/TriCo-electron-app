@@ -1,16 +1,13 @@
 const {app, BrowserWindow, ipcMain, dialog, shell} = require('electron');
-var excelToMYSQL = require('excel-to-mysql');
 const notifier = require('node-notifier');
-var Datastore = require('nedb')
-, db = new Datastore({ filename: app.getPath('appData')+'/excel-to-db/data/mysql/new.db'})
-, db2 = new Datastore({ filename: app.getPath('appData')+'/excel-to-db/data/mongo/new.db'})
-, historydb = new Datastore({filename: app.getPath('appData')+'/excel-to-db/data/history/new.db'});
-db.loadDatabase();
-db2.loadDatabase();
-historydb.loadDatabase();
 var path = require('path');
-var excelToMongoDB = require('excel-to-mongodb');
 var request = require('request');
+var {PythonShell} = require('python-shell');
+
+
+// 设置一个全局变量来决定是否为开发环境
+const NODE_ENV = 'production'
+// const NODE_ENV = 'development'
 let image;
 if (process.platform === 'darwin') {
 	image = path.join(__dirname, 'images', 'logo.icns');
@@ -30,36 +27,9 @@ function createWindow(){
 	win.on('closed', function(){
 		win = null;
 	});
-	win.webContents.on('did-finish-load', function(){
-		//Load the previous MySQL credentials
-		db.find({}, function (err, docs) {
-			if(!err){
-				if(docs.length){
-					win.webContents.send('startupMySQL', docs);
-					//Load the previous MongoDB credentials
-					db2.find({}, function(err, docs){
-						if(!err){
-							if(docs.length){
-								win.webContents.send('startupMongoDB', docs);
-								//Load the full history
-								historydb.find({}, function(err, docs){
-									if(!err){
-										if(docs.length){
-											//Sort the history according to the time
-											docs.sort(function (a, b) {
-												return a.time - b.time;
-											});
-											win.webContents.send('startupHistory', docs);
-										}
-									}
-								});
-							}
-						}
-					});
-				}
-			}
-		});
-	});
+	if(NODE_ENV==='development'){
+		win.webContents.openDevTools()
+	}
 	checkUpdates();
 }
 //Function to check for updates of app
@@ -121,204 +91,23 @@ function checkUpdates(e){
 		}
 	});
 }
+function checkExcel(options){
+	//nodejs 创建多个子线程调用python
+
+	PythonShell.run('batch_read_excel.py', options, function (err, results) {
+		if (err) throw err;
+		// results is an array consisting of messages collected during execution
+		// return results;
+		// ipcRenderer.send('asynchronous-reply',results)
+		win.webContents.send('asynchronous-reply', results);
+	});
+}
 ipcMain.on('update', function(e, item){
 	checkUpdates('f');
 });
-//Function to perform onclick of clear history button
-ipcMain.on('clearHistory', function(e, item){
-	dialog.showMessageBox(
-		{
-			type: 'info',
-			buttons:['Yes', 'No'],
-			title: 'Clear everything?',
-			detail: 'This will clear the records. The data backups won\'t be removed. You can remove the backups manually in the installation directory.',
-		}, function(response){
-			if(response === 0){
-				historydb.remove({}, {multi:true});
-			}
-		}
-	);
-});
-//Initiate the MongoDB Conversion
-ipcMain.on('readXlsForMongo', function(e, item){
-	var count = 0;
-	var pathArray = item.path;
-	var options = {};
-	//Create the options parameter for 'excel-to-mongodb' module
-	if(item.safeMode){
-		options.safeMode = true;
-	}
-	if(item.customStartEnd){
-		options.customStartEnd = true;
-		options.startRow = item.rowS;
-		options.endRow = item.rowE;
-		options.startCol = item.colS;
-		options.endCol = item.colE;
-	}
-	//Remove the previously stored credentials
-	db2.remove({}, { multi: true });
-	//Insert the new credentials
-	db2.insert({table:item.table,db:item.db}, function(error, results){
-		if(error){}
-		else{
-		}
-	});
-	//Add this transaction as a history
-	historydb.insert({table:item.table,db:item.db, files: pathArray, time: new Date(), destination:'MONGO'}, function(error, results){
-		if(error){}
-	});
-	let i = 0;
-	//Batch processing for all the input files
-	while(i<pathArray.length){
-		excelToMongoDB.covertToMongo({host: "localhost",path: pathArray[i],collection: item.table,db: item.db}, options, function(error, results){
-			if(error){
-				if(error.errorLabels){
-					dialog.showErrorBox('Some Error occured!', 'There may be a connection error!');
-					return;
-				}
-			}
-			else{
-				//set the progress bar in taskbar
-				win.webContents.send('progress', i/pathArray.length);
-				win.setProgressBar(i/pathArray.length);
-				if(i===pathArray.length && count===0){
-					count = 1;
-					dialog.showMessageBox({
-						type: 'info',
-						buttons:['Close'],
-						title: 'Success',
-						detail: 'Operation Completed Successfully!'
-					});
-					notifier.notify(
-					{
-						appName: "NGUdbhav.TriCo",
-						title: 'Sent to MongoDB',
-						message: 'Coversion to mongo completed successfully. Click to send Feedback.',
-						icon: path.join(__dirname, 'images', 'logo.ico'),
-						sound: true,
-						wait:true
-					});
-					notifier.on('click', function(notifierObject, options) {
-						shell.openExternal('https://www.softpedia.com/get/Internet/Servers/Database-Utils/TriCO.shtml');
-					});
-				}
-			}
-		});
-		i++;
-	}
-});
-//Initiate the MySQL Conversion
-ipcMain.on('readXls', function(e, item){
-	var count = 0;
-	var pathArray = item.path;
-	var options = {};
-	//Create the options parameter for 'excel-to-mysql' module
-	if(item.autoid){
-		options.autoId = true;
-	}
-	if(item.safeMode){
-		options.safeMode = true;
-	}
-	if(item.customStartEnd){
-		options.customStartEnd = true;
-		options.startRow = item.rowS;
-		options.endRow = item.rowE;
-		options.startCol = item.colS;
-		options.endCol = item.colE;
-	}
-	//Overwrite the previously stored credentials
-	db.remove({}, { multi: true });
-	db.insert({user: item.user,table:item.table,db:item.db}, function(error, results){
-		if(error){}
-	});
-	let i = 0;
-	//Add this transaction into history
-	historydb.insert({table:item.table,db:item.db, files: pathArray, time: new Date(), destination:'SQL'}, function(error, results){
-		if(error){}
-	});
-	//Iterate over all the input files
-	while(i<pathArray.length){
-		if(item.fileConvertCheck){
-			//Check if the task is to convert to file
-			excelToMYSQL.convertToFile({path: pathArray[i], table:item.table, db:item.db}, options, function(error, results){
-				if(error){
-					dialog.showErrorBox('Some Error occured!', error);
-					return;
-				}
-				else{
-					if(win){
-						//set the progress bar
-						win.webContents.send('progress', i/pathArray.length);
-						win.setProgressBar(i/pathArray.length);
-						if(i===pathArray.length && count === 0){
-							count = 1;
-							dialog.showMessageBox({
-								type: 'info',
-								buttons:['Close'],
-								title: 'Success',
-								detail: 'Operation Completed Successfully!'
-							});
-							notifier.notify(
-							{
-								appName: "NGUdbhav.TriCo",
-								title: 'Sent to File',
-								message: 'Coversion to File completed successfully. Click to send Feedback.',
-								icon: path.join(__dirname, 'images', 'logo.ico'),
-								sound: true,
-								wait:true
-							});
-							notifier.on('click', function(notifierObject, options) {
-								shell.openExternal('https://www.softpedia.com/get/Internet/Servers/Database-Utils/TriCO.shtml');
-							});
-						}
-					}
-				}
-			});
-			i++;
-		}
-		else{
-			//If the task is to convert to db
-			excelToMYSQL.covertToMYSQL({host: "localhost",user: item.user,pass: item.pass,path: pathArray[i],table: item.table,db: item.db}, options, function(error, results){
-				if(error){
-					dialog.showErrorBox('Some Error occured!', error);
-					return;
-				}
-				else{
-					if(win){
-						//set the progress bar
-						win.webContents.send('progress', i/pathArray.length);
-						win.setProgressBar(i/pathArray.length);
-						if(i===pathArray.length && count === 0){
-							count = 1;
-							dialog.showMessageBox({
-								type: 'info',
-								buttons:['Close'],
-								title: 'Success',
-								detail: 'Operation Completed Successfully!'
-							});
-							notifier.notify(
-							{
-								appName: "NGUdbhav.TriCo",
-								title: 'Sent to MySQL',
-								message: 'Coversion to mysql completed successfully. Click to send Feedback.',
-								icon: path.join(__dirname, 'images', 'logo.ico'),
-								sound: true,
-								wait:true
-							});
-							notifier.on('click', function(notifierObject, options) {
-								shell.openExternal('https://www.softpedia.com/get/Internet/Servers/Database-Utils/TriCO.shtml');
-							});
-						}
-					}
-				}
-			});
-			i++;
-		}
-	}
-});
-//open buymeacoffee page in the default browser of the system
-ipcMain.on('coffee', function(e, item){
-	shell.openExternal('https://www.buymeacoffee.com/ngudbhav');
+ipcMain.on('readXls',function(e,item){
+	// e.sender.send('asynchronous-reply', );
+	checkExcel(item)
 });
 app.on('ready', ()=>{
 	createWindow();

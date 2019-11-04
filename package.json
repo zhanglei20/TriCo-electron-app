@@ -1,17 +1,18 @@
 {
   "name": "TriCo",
   "version": "2.6.2",
-  "description": "Convert any Excel file to your MYSQL/MongoDB Data",
+  "description": "Convert any Excel file to your QY hotel Data",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
     "pack": "electron-builder --dir",
-    "dist": "electron-builder",
+    "dist": "electron-p ",
     "package-mac": "electron-packager . --overwrite --platform=darwin --arch=x64 --icon=images/logo.icns --prune=true --out=release-builds",
     "package-win": "electron-packager . TriCo --overwrite --asar=true --platform=win32 --arch=x64 --icon=images/logo.ico --prune=true --out=release-builds --version-string.CompanyName=NGUdbhav --version-string.FileDescription=Application --version-string.ProductName=\"TriCo\"",
     "package-linux": "electron-packager . TriCo --overwrite --asar=true --platform=linux --arch=x64 --icon=images/logo.ico --prune=true --out=release-builds",
     "install-redhat": "electron-installer-redhat --src release-builds/TriCo-linux-x64/ --dest dist/installers/ --arch x86_64",
-    "install-debian": "electron-installer-debian --src release-builds/TriCo-linux-x64/ --dest dist/installers/ --arch amd64"
+    "install-debian": "electron-installer-debian --src release-builds/TriCo-linux-x64/ --dest dist/installers/ --arch amd64",
+    "build-python":"pyinstaller ./py/batch_read_excel.py --clean --distpath ./pydist"
   },
   "build": {
     "appId": "NGUdbhav.TriCo",
@@ -31,13 +32,12 @@
   "dependencies": {
     "bootstrap": "^4.3.1",
     "custom-electron-titlebar": "^3.0.8",
-    "excel-to-mongodb": "^1.5.8",
-    "excel-to-mysql": "^2.5.7",
     "jquery": "^3.4.1",
     "nedb": "^1.8.0",
     "node-notifier": "^5.4.0",
     "popper.js": "^1.15.0",
-    "request": "^2.88.0"
+    "request": "^2.88.0",
+    "python-shell": "latest"
   },
   "devDependencies": {
     "electron": "^5.0.1",

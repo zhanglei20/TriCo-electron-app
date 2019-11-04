@@ -1,0 +1,1 @@
+/Users/oyo/Tools/build_app_script/quickpkg /Users/oyo/oyo_application_group/TriCo-electron-app/release-builds/TriCo-darwin-x64/TriCo.app --output /Users/oyo/Tools/RELEASE-APP-PKG/TriCo.pkg >./build_result.txt
