@@ -308,22 +308,21 @@ def get_rooms(floor_rooms, hotel_name):
     room_sum = 0
     print('<br>')
     print(hotel_name)
-    print('<br>')
 
     for index, room_type_floor in enumerate(floor_rooms):
         room_nums = room_type_floor.get('roomNo')
-        row_index = index + 3
+
         if room_nums is None:
             continue
 
         if isinstance(room_nums, int):
             room_nums = str(room_nums)
-
+        row_index = index + 3
         room_nums = room_nums.replace('、', ',').replace('，', ',').replace('.', ',')
 
         room_type_id = room_type_floor.get('roomTypeId')
         if room_type_id is None:
-            print('<p style="color:red">' + hotel_name + ',第%s行,房型错误</p>' % row_index)
+            print('<p style="color:red">' + hotel_name + ',第%s行,房型错误</p>' % index + 3)
 
         ret_room_type = ret_rooms.get(room_type_id, {
             'roomTypeId': room_type_id,

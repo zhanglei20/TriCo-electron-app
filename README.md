@@ -6,8 +6,7 @@
 [![Last-Release](https://img.shields.io/github/release-date/ngudbhav/TriCo-electron-app.svg)](https://github.com/ngudbhav/TriCo-electron-app/releases)
 [![Platforms](https://img.shields.io/badge/platform-win%20%7C%20deb%20%7C%20rpm-green.svg)](https://github.com/ngudbhav/TriCo-electron-app/releases)
 
-This App Converts your correctly formatted Excel Spreadsheet to a specified table/collection in specified Database in MYSQL/MongoDB.
-
+This application converts a well formed Excel spreadsheet to basic hotel information
 ## Do checkout the upcoming features in CHANGELOG.md
 
 ![mysql.png](images/screenshots/mysql.png)
@@ -26,7 +25,7 @@ Please have a look at the sample Excel sheets provided to have a clear view of t
 # Starting The App
 ```sh
 sudo npm install -g electron
-git clone https://github.com/ngudbhav/TriCo-electron-app.git
+git clone https://github.com/zhanglei20/Oyo-hotel-app.git
 cd TriCo-electron-app
 npm install
 npm start
